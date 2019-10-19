@@ -2,14 +2,13 @@
 
 #include <odroid_go.h>
 
-  const unsigned char startup_music[] = {0};
-
-  #define WIDTH  320
-  #define HEIGHT 240
-  #define n (WIDTH * HEIGHT)
-
-  #define min(a,b) ((a)<(b)?(a):(b))
-  #define max(a,b) ((a)>(b)?(a):(b))
+  #define SPEAKER 25
+  #define WIDTH   160
+  #define HEIGHT  120
+  #define WFULL   320
+  #define HFULL   240
+  #define SCR     (WFULL*HFULL)
+  #define n       (WIDTH * HEIGHT)
 
   static uint16_t gray2rgb565[64] = {
     0x0000,
@@ -81,6 +80,9 @@
 
   uint32_t size = ((2*WIDTH) * (2*HEIGHT));
 
+  float sinus[7] = { 0, sinf(TWO_PI/1.0f), sinf(TWO_PI/2.0f),  sinf(TWO_PI/3.0f),  sinf(TWO_PI/4.0f),  sinf(TWO_PI/5.0f),  sinf(TWO_PI/6.0f) };
+  float cosinus[7] = { 0, cosf(TWO_PI/1.0f), cosf(TWO_PI/2.0f),  cosf(TWO_PI/3.0f),  cosf(TWO_PI/4.0f),  cosf(TWO_PI/5.0f),  cosf(TWO_PI/6.0f) };
+
   uint16_t *col = NULL;
   
   int8_t *bestLevel = NULL;
@@ -98,11 +100,13 @@
   float randomf(float minf, float maxf) {return minf + (esp_random()%(1UL << 31)) * (maxf - minf) / (1UL << 31);}
 
   int level, i, x, y;
+  int blurlevels, symmetry;
  
   float base;
   int levels;
   float stepScale;
   float stepOffset;
+  float blurFactor;
 
   
 void setup() {
@@ -110,8 +114,8 @@ void setup() {
   srand(time(NULL));
 
   GO.begin();
-  GO.Speaker.setVolume(1);
-  GO.Speaker.playMusic(startup_music, 22050);
+  pinMode(SPEAKER, OUTPUT);
+  digitalWrite(SPEAKER, LOW);
   GO.lcd.fillScreen(BLACK);
 
   bestLevel = (int8_t*)ps_malloc(size);
@@ -125,7 +129,7 @@ void setup() {
   direction = (bool*)ps_malloc(size);
   stepSizes = (float*)ps_malloc(WIDTH);
   radii = (int8_t*)ps_malloc(WIDTH);
-  col = (uint16_t*)ps_malloc(size);
+  col = (uint16_t*)ps_malloc(4*(SCR));
 
   rndrule();
   
@@ -136,12 +140,15 @@ void loop() {
 
   if (GO.BtnA.wasPressed()) rndrule();
 
+  if(symmetry >= 1) for(i = 0; i < n; i++) grid[i] = grid[i] * 0.9f + grid[getSymmetry(i, WIDTH, HEIGHT)] * 0.1f;
+
   memcpy(activator, grid, 4*n);
  
-    for (level = 0; level < levels - 1; level++) {
+  for (level = 0; level < levels - 1; level++) {
       
-      int radius = radii[level];
+    int radius = radii[level];
     
+    if(level <= blurlevels){       
       for (y = 0; y < HEIGHT; y++) {
         for (x = 0; x < WIDTH; x++) {
           int t = y * WIDTH + x;
@@ -151,6 +158,7 @@ void loop() {
           else blurBuffer[t] = blurBuffer[t - 1] + blurBuffer[t - WIDTH] - blurBuffer[t - WIDTH - 1] + activator[t];
         }
       }
+    }
 
     for (y = 0; y < HEIGHT; y++) {
       for (x = 0; x < WIDTH; x++) {
@@ -171,31 +179,23 @@ void loop() {
     }
     
     for (i = 0; i < n; i++) {
-      variation[i] = activator[i] - inhibitor[i];
-      if (variation[i] < 0) variation[i] = -variation[i];
-    }
- 
-    if (level == 0) {
-      for (i = 0; i < n; i++) {
-        bestVariation[i] = variation[i];
+      float variation = fabs(activator[i] - inhibitor[i]);
+      if (level == 0 || variation < bestVariation[i]) {
+        bestVariation[i] = variation;
         bestLevel[i] = level;
         direction[i] = activator[i] > inhibitor[i];
-      } 
-    }
-    else {
-      for (i = 0; i < n; i++) {
-        if (variation[i] < bestVariation[i]) {
-          bestVariation[i] = variation[i];
-          bestLevel[i] = level;
-          direction[i] = activator[i] > inhibitor[i];
-        }
       }
-      
+    }
+ 
+   if(level==0) {
+      memcpy(activator, inhibitor, 4*n);
+    } else {
       memcpy(swap, activator, 4*n);
       memcpy(activator, inhibitor, 4*n);
       memcpy(inhibitor, swap, 4*n);
-      }
     }
+            
+  } 
 
   float smallest = MAXFLOAT;
   float largest = -MAXFLOAT;
@@ -214,22 +214,27 @@ void loop() {
     for (x = 0; x < WIDTH; x++) {
       grid[x+WIDTH*y] = ((grid[x+WIDTH*y] - smallest) / range) - 1.0f; 
       uint8_t coll = 128 + (128 * grid[x+WIDTH*y]);
-      col[x+WIDTH*y] = gray2rgb565[(uint8_t)coll>>2];
+      col[(2*x)+WFULL*(2*y)] = gray2rgb565[(uint8_t)coll>>2];
     }
   }
 
-  GO.lcd.pushRect(0, 0, WIDTH, HEIGHT,(uint16_t *) col);
+  GO.lcd.pushRect(0, 0, WFULL, HFULL,(uint16_t *) col);
   GO.update();
 
 }
 
 void rndrule(){
-  
+
+  memset((uint16_t *) col, 0, 4*SCR);
+
+  symmetry = esp_random()%7;
   base = randomf(1.5f, 2.4f);
   stepScale = randomf(0.01f, 0.2f);
   stepOffset = randomf(0.01f, 0.4f);
+  blurFactor = randomf(0.5f, 1.0f);
   
   levels = (int) (log(max(WIDTH,HEIGHT)) / logf(base)) - 1.0f;
+  blurlevels = (int) max(0, (levels+1) * blurFactor - 0.5f);
 
   for (i = 0; i < levels; i++) {
     int radius = (int)powf(base, i);
@@ -239,4 +244,19 @@ void rndrule(){
 
   for (i = 0; i < n; i++) grid[i] = randomf(-1.0f, 1.0f);
 
+}
+
+int getSymmetry(int i, int w, int h) {
+  
+  if(symmetry <= 1) return i;
+  if(symmetry == 2) return n - 1 - i;
+  int x1 = i % w;
+  int y1 = i / w;
+  float dx = x1 - w/2.0f;
+  float dy = y1 - h/2.0f;
+  int x2 = w/2 + (int)(dx * cosinus[symmetry] + dy * sinus[symmetry]);
+  int y2 = h/2 + (int)(dx * -sinus[symmetry] + dy * cosinus[symmetry]);
+  int j = x2 + y2 * w;
+  return j<0 ? j+n : j>=n ? j-n : j;
+  
 }
