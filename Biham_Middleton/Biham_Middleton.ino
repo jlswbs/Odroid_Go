@@ -2,21 +2,18 @@
 
 #include <odroid_go.h>
 
-  const unsigned char startup_music[] = {0};
-
-  #define WIDTH  160
-  #define HEIGHT 120
-  #define WFULL  320
-  #define HFULL  240
-  #define SCR    (WFULL*HFULL)
-
+  #define SPEAKER 25
+  #define WIDTH   160
+  #define HEIGHT  120
+  #define WFULL   320
+  #define HFULL   240
+  #define SCR     (WFULL*HFULL)
 
   uint32_t size = ((2*WIDTH) * (2*HEIGHT));
-
+  
   uint16_t *col = NULL;
 
   int x, y;
-
   int density = 35;
 
   int rule[] = {0,0,0,0,2,2,1,1,1,2,2,2,0,2,2,1,1,1,0,0,0,0,2,2,1,1,1};
@@ -29,6 +26,22 @@ int color2state(int c){ return c == RED ? 1 : (c == GREEN ? 2 : 0); }
 int state2color(int s){ return s == 1 ? RED : (s == 2 ? GREEN : WHITE); }
 
 void rules() {for(int i=0; i<27; i++) rule[i] = esp_random()%3;}
+
+void trafficSetCenter(){
+  
+  memset(col, 0, 4*SCR);
+  memset(pixles, 0, sizeof(pixles));
+
+  col[(HFULL/2)*WFULL+((WFULL-1)/2)] = RED;
+  col[(HFULL/2)*WFULL+((WFULL+1)/2)] = GREEN;
+
+  for(x=0; x<WIDTH; x++){
+    for(y=0; y<HEIGHT; y++){
+     pixles[y*WIDTH+x] = color2state(col[(2*x)+WFULL*(2*y)]);
+    }
+  }
+  
+}
 
 void trafficSet(){
 
@@ -59,13 +72,13 @@ void setup() {
   srand(time(NULL));
 
   GO.begin();
-  GO.Speaker.setVolume(1);
-  GO.Speaker.playMusic(startup_music, 22050);
+  pinMode(SPEAKER, OUTPUT);
+  digitalWrite(SPEAKER, LOW);
   GO.lcd.fillScreen(BLACK);
 
   pixles = (uint8_t*)ps_malloc(size);
   slexip = (uint8_t*)ps_malloc(size);
-  col = (uint16_t*)ps_malloc(4*(320*240));
+  col = (uint16_t*)ps_malloc(4*SCR);
 
   trafficSet();
   
@@ -76,6 +89,7 @@ void loop() {
 
   if (GO.BtnA.wasPressed()) {rules(); trafficSet();}
   if (GO.BtnB.wasPressed()) trafficSet();
+  if (GO.BtnA.wasPressed() && GO.BtnB.wasPressed()) {rules(); trafficSetCenter();}
 
   for(x = 0; x<WIDTH; x++){
     for(y = 0; y<HEIGHT; y++){
