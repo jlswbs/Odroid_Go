@@ -2,18 +2,26 @@
 
 #include <odroid_go.h>
 
-const unsigned char startup_music[] = {0};
+  #define SPEAKER 25
+  #define WIDTH   160
+  #define HEIGHT  120
+  #define WFULL   320
+  #define HFULL   240
+  #define SCR     (WFULL*HFULL)
+  #define SCR2    (WIDTH*HEIGHT)
 
-#define WIDTH 162
-#define HEIGHT 162
 
-#define DENSITY     7
-#define READY       0
-#define REFRACTORY  1
-#define FIRING      2
+  uint32_t size = ((2*WIDTH) * (2*HEIGHT));
 
-  uint16_t world[WIDTH][HEIGHT];
-  uint16_t temp[WIDTH][HEIGHT];
+  uint16_t *col = NULL;
+
+  #define DENSITY     7
+  #define READY       0
+  #define REFRACTORY  1
+  #define FIRING      2
+
+  uint8_t *world = NULL;
+  uint8_t *temp = NULL;
 
 
 int weighted_randint(int true_weight)
@@ -25,7 +33,7 @@ int weighted_randint(int true_weight)
 }
 
 
-int count_neighbours(uint16_t world[WIDTH][HEIGHT], int x_pos, int y_pos)
+int count_neighbours(uint8_t world[], int x_pos, int y_pos)
 {
     int x, y, cx, cy, cell;
     int count = 0;
@@ -35,7 +43,7 @@ int count_neighbours(uint16_t world[WIDTH][HEIGHT], int x_pos, int y_pos)
             cx = x_pos + x;
             cy = y_pos + y;
             if ( (0 <= cx && cx < WIDTH) && (0 <= cy && cy < HEIGHT)) {
-                cell = world[x_pos + x][y_pos + y];
+                cell = world[(x_pos + x)+(y_pos + y)*WIDTH];
                 if (cell == FIRING) count ++;
             }
         }
@@ -44,20 +52,20 @@ int count_neighbours(uint16_t world[WIDTH][HEIGHT], int x_pos, int y_pos)
 }
 
 
-void apply_rules(uint16_t world[WIDTH][HEIGHT])
+void apply_rules(uint8_t world[])
 {
   int x, y, cell, neighbours;
 
-  memcpy(temp, world, sizeof(temp));
+  memcpy(temp, world, 4*SCR2);
 
   for (y = 0; y < HEIGHT; y++) {
     for (x = 0; x < WIDTH; x++){
-      cell = temp[x][y];          
+      cell = temp[x+y*WIDTH];          
       if (cell == READY) {
         neighbours = count_neighbours(temp, x, y);
-        if (neighbours == 2) world[x][y] = FIRING; }
-      else if (cell == FIRING) world[x][y] = REFRACTORY;
-      else world[x][y] = READY;
+        if (neighbours == 2) world[x+y*WIDTH] = FIRING; }
+      else if (cell == FIRING) world[x+y*WIDTH] = REFRACTORY;
+      else world[x+y*WIDTH] = READY;
     }
   }
 }
@@ -66,28 +74,29 @@ void populate()
 {
   int x, y, r;
   
+  memset((uint16_t *) col, 0, 4*SCR);
+
   for (y = 0; y < HEIGHT; y++) {
     for (x = 0; x < WIDTH; x++){
       r = weighted_randint(DENSITY);
-      if (r == 1) world[x][y] = FIRING;
-      else world[x][y] = READY;
+      if (r == 1) world[x+y*WIDTH] = FIRING;
+      else world[x+y*WIDTH] = READY;
     }
   }
 }
   
 void setup() {
 
+  srand(time(NULL));
+
   GO.begin();
-  GO.Speaker.setVolume(1);
-  GO.Speaker.playMusic(startup_music, 22050);
+  pinMode(SPEAKER, OUTPUT);
+  digitalWrite(SPEAKER, LOW);
   GO.lcd.fillScreen(BLACK);
 
-  GO.lcd.setCursor(68, 8);
-  GO.lcd.print("Brian's Brain Cellular Automata");
-  GO.lcd.setCursor(86, 224);
-  GO.lcd.print("Press button A = Restart");
-
-  srand(time(NULL));
+  world = (uint8_t*)ps_malloc(4*SCR2);
+  temp = (uint8_t*)ps_malloc(4*SCR2);
+  col = (uint16_t*)ps_malloc(4*SCR);
 
   populate();
   
@@ -104,14 +113,13 @@ void loop() {
     
   for (y = 0; y < HEIGHT; y++) {
     for (x = 0; x < WIDTH; x++){
-      if (world[x][y] == FIRING) temp[x][y] = WHITE;   
-      else if (world[x][y] == REFRACTORY) temp[x][y] = WHITE;
-      else temp[x][y] = BLACK;
+      if (world[x+y*WIDTH] == FIRING) col[(2*x)+(2*y)*WFULL] = WHITE;   
+      else if (world[x+y*WIDTH] == REFRACTORY) col[(2*x)+(2*y)*WFULL] = YELLOW;
+      else col[(2*x)+(2*y)*WFULL] = BLACK;
     }
   }
 
-  GO.lcd.drawBitmap(79, 39, WIDTH, HEIGHT,(uint16_t *) temp);
-
+  GO.lcd.pushRect(0, 0, WFULL, HFULL,(uint16_t *) col);
   GO.update();
     
 }
