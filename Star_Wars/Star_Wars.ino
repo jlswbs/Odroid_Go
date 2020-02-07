@@ -1,6 +1,6 @@
 // StarWars Cellular Automata //
 
-#include <odroid_go.h>
+#include <M5Stack.h>
 
   #define SPEAKER 25
   #define WIDTH   160
@@ -10,9 +10,7 @@
   #define SCR     (WFULL*HFULL)
   #define SCR2    (WIDTH*HEIGHT)
 
-
   uint32_t size = ((2*WIDTH) * (2*HEIGHT));
-
   uint16_t *col = NULL;
 
   #define ALIVE   3
@@ -37,6 +35,19 @@ void rndrule(){
   for (x = 0; x < WIDTH; x++) {  
     for (y = 0; y < HEIGHT; y++) current[x+y*WIDTH] = esp_random() % 4;
   }
+
+}
+
+void symrule(){
+  
+  int x, y;
+  
+  memset((uint16_t *) col, 0, 4*SCR);
+  memset(alive_counts, 0, 4*SCR2);
+  memset(current, 0, 4*SCR2);
+
+  current[80+(60*WIDTH)] = 3;
+  current[79+(60*WIDTH)] = 3;
 
 }
 
@@ -99,8 +110,8 @@ void draw_type(int min_alive, int max_alive, uint16_t s) {
       
       col[(2*x)+(2*y)*WFULL] = s;
    
-      }
-   }
+    }
+  }
 }
 
   
@@ -108,10 +119,11 @@ void setup() {
 
   srand(time(NULL));
 
-  GO.begin();
+  M5.begin();
   pinMode(SPEAKER, OUTPUT);
   digitalWrite(SPEAKER, LOW);
-  GO.lcd.fillScreen(BLACK);
+  M5.Lcd.setTextColor(TFT_WHITE, TFT_BLACK);
+  M5.lcd.fillScreen(BLACK);
 
   current = (uint8_t*)ps_malloc(4*SCR2);
   next = (uint8_t*)ps_malloc(4*SCR2);
@@ -126,7 +138,9 @@ void setup() {
 
 void loop() {
 
-  if (GO.BtnA.wasPressed()) rndrule();
+  if (M5.BtnA.wasPressed()) { rndrule(); M5.Lcd.drawString("RND", 10, 10, 2); }
+  if (M5.BtnB.wasPressed()) { symrule(); M5.Lcd.drawString("Symmetry", 10, 10, 2); }
+
    
   step();
       
@@ -136,7 +150,7 @@ void loop() {
   draw_type(2, 49, PURPLE);
   draw_type(0, 1, WHITE);
   
-  GO.lcd.pushRect(0, 0, WFULL, HFULL,(uint16_t *) col);
-  GO.update();
+  M5.lcd.pushRect(0, 0, WFULL, HFULL,(uint16_t *) col);
+  M5.update();
     
 }

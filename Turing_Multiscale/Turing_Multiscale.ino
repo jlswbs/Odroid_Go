@@ -1,6 +1,6 @@
 // Multi-Scale Turing Patterns //
 
-#include <odroid_go.h>
+#include <M5Stack.h>
 
   #define SPEAKER 25
   #define WIDTH   160
@@ -9,6 +9,9 @@
   #define HFULL   240
   #define SCR     (WFULL*HFULL)
   #define n       (WIDTH * HEIGHT)
+  
+  #define max(a, b) (((a) > (b)) ? (a) : (b))
+  #define min(a, b) (((a) < (b)) ? (a) : (b))
 
   static uint16_t gray2rgb565[64] = {
     0x0000,
@@ -113,10 +116,11 @@ void setup() {
 
   srand(time(NULL));
 
-  GO.begin();
+  M5.begin();
   pinMode(SPEAKER, OUTPUT);
   digitalWrite(SPEAKER, LOW);
-  GO.lcd.fillScreen(BLACK);
+  M5.Lcd.setTextColor(TFT_WHITE, TFT_BLACK);
+  M5.lcd.fillScreen(BLACK);
 
   bestLevel = (int8_t*)ps_malloc(size);
   grid = (float*)ps_malloc(size);
@@ -138,7 +142,7 @@ void setup() {
 
 void loop() {
 
-  if (GO.BtnA.wasPressed()) rndrule();
+  if (M5.BtnA.wasPressed()) { rndrule(); M5.Lcd.drawString("RND", 10, 10, 2); }
 
   if(symmetry >= 1) for(i = 0; i < n; i++) grid[i] = grid[i] * 0.9f + grid[getSymmetry(i, WIDTH, HEIGHT)] * 0.1f;
 
@@ -214,12 +218,12 @@ void loop() {
     for (x = 0; x < WIDTH; x++) {
       grid[x+WIDTH*y] = ((grid[x+WIDTH*y] - smallest) / range) - 1.0f; 
       uint8_t coll = 128 + (128 * grid[x+WIDTH*y]);
-      col[(2*x)+WFULL*(2*y)] = gray2rgb565[(uint8_t)coll>>2];
+      col[(2*x)+(2*y)*WFULL] = gray2rgb565[(uint8_t)coll>>2];
     }
   }
 
-  GO.lcd.pushRect(0, 0, WFULL, HFULL,(uint16_t *) col);
-  GO.update();
+  M5.lcd.pushRect(0, 0, WFULL, HFULL,(uint16_t *) col);
+  M5.update();
 
 }
 
@@ -233,7 +237,7 @@ void rndrule(){
   stepOffset = randomf(0.01f, 0.4f);
   blurFactor = randomf(0.5f, 1.0f);
   
-  levels = (int) (log(max(WIDTH,HEIGHT)) / logf(base)) - 1.0f;
+  levels = (int) (logf(max(WIDTH,HEIGHT)) / logf(base)) - 1.0f;
   blurlevels = (int) max(0, (levels+1) * blurFactor - 0.5f);
 
   for (i = 0; i < levels; i++) {

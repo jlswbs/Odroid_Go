@@ -1,6 +1,6 @@
 // Fizzy Cellular Automata //
 
-#include <odroid_go.h>
+#include <M5Stack.h>
 
   #define SPEAKER 25
   #define WIDTH   160
@@ -12,11 +12,8 @@
 
   uint32_t size = ((2*WIDTH) * (2*HEIGHT));
   uint16_t *col = NULL;
-  
-  uint8_t *parent = NULL;
-  uint8_t *child = NULL;
 
-  int Calm = 40; //233
+  uint8_t Calm = 233;
   int CellIndex = 0;
   int i,j;
 
@@ -33,36 +30,35 @@ void setup() {
 
   srand(time(NULL));
 
-  GO.begin();
+  M5.begin();
   pinMode(SPEAKER, OUTPUT);
   digitalWrite(SPEAKER, LOW);
-  GO.lcd.fillScreen(BLACK);
+  M5.Lcd.setTextColor(TFT_WHITE, TFT_BLACK);
+  M5.lcd.fillScreen(BLACK);
 
   CellVal = (float*)ps_malloc(size);
   col = (uint16_t*)ps_malloc(4*SCR);
 
-  memset((uint16_t *) col, 0, 4*SCR);
-
   rndrule();
-  
+
 }
 
 
 void loop() {
 
-  if (GO.BtnA.wasPressed()) rndrule();
+  if (M5.BtnA.wasPressed()) { rndrule(); M5.Lcd.drawString("RND", 10, 10, 2); }
+  if (M5.BtnB.wasPressed()) { Calm = 21 + esp_random()%213; M5.Lcd.drawNumber(Calm, 10, 10, 2); }
 
   for (i = 0; i < WIDTH; i++) {
-
     for (j = 0; j < HEIGHT; j++) {
 
       CellIndex = (CellIndex+1)%SCR2;
 
-      uint8_t klimp = (uint8_t)(CellVal[CellIndex]*4.7f)%100;       
-      uint8_t nifna = (uint8_t)(CellVal[CellIndex]*3.9f)%100;
-      uint8_t blugg = (uint8_t)(CellVal[CellIndex]*5.5f)%100;
-      
-      col[(2*i)+(2*j)*WFULL] = GO.lcd.color565(klimp,nifna,blugg);
+      uint8_t klimp = (uint8_t)round(CellVal[CellIndex]*4.7f)%100;       
+      uint8_t nifna = (uint8_t)round(CellVal[CellIndex]*3.9f)%100;
+      uint8_t blugg = (uint8_t)round(CellVal[CellIndex]*5.5f)%100;
+
+      col[(2*i)+(2*j)*WFULL] = M5.lcd.color565(klimp,nifna,blugg);
 
       int below      = (CellIndex+1)%SCR2;
       int above      = (CellIndex+SCR2-1)%SCR2;
@@ -74,14 +70,13 @@ void loop() {
       int belowleft  = ((CellIndex+1) - HEIGHT + SCR2)%SCR2;
 
       float NeighbourMix = powf((CellVal[left]*CellVal[right]*CellVal[above]*CellVal[below]*CellVal[belowleft]*CellVal[belowright]*CellVal[aboveleft]*CellVal[aboveright]),0.125f);
-
-      CellVal[CellIndex] = fmod(sqrtf(CellVal[CellIndex]*NeighbourMix)+0.5f, Calm);
+      CellVal[CellIndex] = fmod((sqrtf(CellVal[CellIndex]*NeighbourMix))+0.5f, Calm);
 
     }
 
   }
 
-  GO.lcd.pushRect(0, 0, WFULL, HFULL,(uint16_t *) col);
-  GO.update();
+  M5.lcd.pushRect(0, 0, WFULL, HFULL,(uint16_t *) col);
+  M5.update();
 
 }
