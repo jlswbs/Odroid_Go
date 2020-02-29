@@ -1,6 +1,8 @@
 // Biham-Middleton-Levine Traffic Model //
 
-#include <odroid_go.h>
+#include "esp_partition.h"
+#include "esp_ota_ops.h"
+#include <M5Stack.h>
 
   #define SPEAKER 25
   #define WIDTH   160
@@ -25,23 +27,7 @@ int color2state(int c){ return c == RED ? 1 : (c == GREEN ? 2 : 0); }
 
 int state2color(int s){ return s == 1 ? RED : (s == 2 ? GREEN : WHITE); }
 
-void rules() {for(int i=0; i<27; i++) rule[i] = esp_random()%3;}
-
-void trafficSetCenter(){
-  
-  memset(col, 0, 4*SCR);
-  memset(pixles, 0, sizeof(pixles));
-
-  col[(HFULL/2)*WFULL+((WFULL-1)/2)] = RED;
-  col[(HFULL/2)*WFULL+((WFULL+1)/2)] = GREEN;
-
-  for(x=0; x<WIDTH; x++){
-    for(y=0; y<HEIGHT; y++){
-     pixles[y*WIDTH+x] = color2state(col[(2*x)+WFULL*(2*y)]);
-    }
-  }
-  
-}
+void rules() { for(int i=0; i<27; i++) rule[i] = esp_random()%3; }
 
 void trafficSet(){
 
@@ -71,10 +57,11 @@ void setup() {
 
   srand(time(NULL));
 
-  GO.begin();
+  M5.begin();
   pinMode(SPEAKER, OUTPUT);
   digitalWrite(SPEAKER, LOW);
-  GO.lcd.fillScreen(BLACK);
+  M5.Lcd.setTextColor(TFT_WHITE, TFT_BLACK);
+  M5.lcd.fillScreen(BLACK);
 
   pixles = (uint8_t*)ps_malloc(size);
   slexip = (uint8_t*)ps_malloc(size);
@@ -87,9 +74,13 @@ void setup() {
 
 void loop() {
 
-  if (GO.BtnA.wasPressed()) {rules(); trafficSet();}
-  if (GO.BtnB.wasPressed()) trafficSet();
-  if (GO.BtnA.wasPressed() && GO.BtnB.wasPressed()) {rules(); trafficSetCenter();}
+  if (M5.BtnA.wasPressed()) { rules(); trafficSet(); M5.Lcd.drawString("Rule", 10, 10, 2); }
+  if (M5.BtnB.wasPressed()) { trafficSet(); M5.Lcd.drawString("Seed", 10, 10, 2); }
+  if (M5.BtnC.wasPressed()) {
+    const esp_partition_t *partition = esp_partition_find_first(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_ANY, NULL);
+    esp_ota_set_boot_partition(partition);
+    esp_restart();
+  }
 
   for(x = 0; x<WIDTH; x++){
     for(y = 0; y<HEIGHT; y++){
@@ -109,7 +100,7 @@ void loop() {
     }
   }
   
-  GO.lcd.pushRect(0, 0, WFULL, HFULL,(uint16_t *) col);
-  GO.update();
+  M5.lcd.pushRect(0, 0, WFULL, HFULL,(uint16_t *) col);
+  M5.update();
 
 }

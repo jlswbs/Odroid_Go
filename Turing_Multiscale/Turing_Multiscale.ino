@@ -1,5 +1,7 @@
 // Multi-Scale Turing Patterns //
 
+#include "esp_partition.h"
+#include "esp_ota_ops.h"
 #include <M5Stack.h>
 
   #define SPEAKER 25
@@ -143,6 +145,11 @@ void setup() {
 void loop() {
 
   if (M5.BtnA.wasPressed()) { rndrule(); M5.Lcd.drawString("RND", 10, 10, 2); }
+  if (M5.BtnC.wasPressed()) {
+    const esp_partition_t *partition = esp_partition_find_first(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_ANY, NULL);
+    esp_ota_set_boot_partition(partition);
+    esp_restart();
+  }
 
   if(symmetry >= 1) for(i = 0; i < n; i++) grid[i] = grid[i] * 0.9f + grid[getSymmetry(i, WIDTH, HEIGHT)] * 0.1f;
 

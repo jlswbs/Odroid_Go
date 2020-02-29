@@ -1,10 +1,12 @@
 // Four state 1D cellular automata //
 
-#include <odroid_go.h>
+#include "esp_partition.h"
+#include "esp_ota_ops.h"
+#include <M5Stack.h>
 
   #define SPEAKER 25
-  #define WIDTH   160
-  #define HEIGHT  120
+  #define WIDTH   320
+  #define HEIGHT  240
   #define WFULL   320
   #define HFULL   240
   #define SCR     (WFULL*HFULL)
@@ -16,6 +18,10 @@
   uint8_t *child = NULL;
 
   int count, i, j;
+  uint16_t col1 = BLACK;
+  uint16_t col2 = GREEN;
+  uint16_t col3 = RED;
+  uint16_t col4 = BLUE;
 
 void rndrule(){
 
@@ -28,10 +34,11 @@ void setup() {
 
   srand(time(NULL));
 
-  GO.begin();
+  M5.begin();
   pinMode(SPEAKER, OUTPUT);
   digitalWrite(SPEAKER, LOW);
-  GO.lcd.fillScreen(BLACK);
+  M5.Lcd.setTextColor(TFT_WHITE, TFT_BLACK);
+  M5.lcd.fillScreen(BLACK);
 
   parent = (uint8_t*)ps_malloc(size);
   child = (uint8_t*)ps_malloc(size);
@@ -41,16 +48,28 @@ void setup() {
 
   for(i = 0; i < WIDTH; i++) parent[i] = 0;
   
-  parent[(80)-1] = 1;
-  parent[(80)] = 3;
-  parent[(80)+1] = 2;
+  parent[(WIDTH/2)-1] = 1;
+  parent[(WIDTH/2)] = 3;
+  parent[(WIDTH/2)+1] = 2;
   
 }
 
 
 void loop() {
 
-  if (GO.BtnA.wasPressed()) rndrule();
+  if (M5.BtnA.wasPressed()) { rndrule(); M5.Lcd.drawString("RND", 10, 10, 2); }
+  if (M5.BtnB.wasPressed()) {
+    col1 = esp_random();
+    col2 = esp_random();
+    col3 = esp_random();
+    col4 = esp_random();
+    M5.Lcd.drawString("Color", 10, 10, 2);
+  }
+  if (M5.BtnC.wasPressed()) {
+    const esp_partition_t *partition = esp_partition_find_first(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_ANY, NULL);
+    esp_ota_set_boot_partition(partition);
+    esp_restart();
+  }
 
   for(j = 0; j < HEIGHT; j++) {
  
@@ -64,11 +83,11 @@ void loop() {
       if(count == 3 || count == 4) child[i] = 1;
       if(count == 1 || count == 2) child[i] = 2;
       if(count == 7 || count == 5 || count == 1) child[i] = 3;
-                
-      if(child[i] == 0) col[(2*i)+(2*j)*WFULL] = BLACK;
-      if(child[i] == 1) col[(2*i)+(2*j)*WFULL] = GREEN;
-      if(child[i] == 2) col[(2*i)+(2*j)*WFULL] = RED;
-      if(child[i] == 3) col[(2*i)+(2*j)*WFULL] = BLUE;
+
+      if(child[i] == 0) col[i+j*WFULL] = col1;
+      if(child[i] == 1) col[i+j*WFULL] = col2;
+      if(child[i] == 2) col[i+j*WFULL] = col3;
+      if(child[i] == 3) col[i+j*WFULL] = col4;  
      
     }
 
@@ -76,7 +95,7 @@ void loop() {
 
   }
 
-  GO.lcd.pushRect(0, 0, WFULL, HFULL,(uint16_t *) col);
-  GO.update();
+  M5.lcd.pushRect(0, 0, WFULL, HFULL,(uint16_t *) col);
+  M5.update();
 
 }

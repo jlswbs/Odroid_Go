@@ -1,5 +1,7 @@
 // Fizzy Cellular Automata //
 
+#include "esp_partition.h"
+#include "esp_ota_ops.h"
 #include <M5Stack.h>
 
   #define SPEAKER 25
@@ -48,7 +50,12 @@ void loop() {
 
   if (M5.BtnA.wasPressed()) { rndrule(); M5.Lcd.drawString("RND", 10, 10, 2); }
   if (M5.BtnB.wasPressed()) { Calm = 21 + esp_random()%213; M5.Lcd.drawNumber(Calm, 10, 10, 2); }
-
+  if (M5.BtnC.wasPressed()) {
+    const esp_partition_t *partition = esp_partition_find_first(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_ANY, NULL);
+    esp_ota_set_boot_partition(partition);
+    esp_restart();
+  }
+  
   for (i = 0; i < WIDTH; i++) {
     for (j = 0; j < HEIGHT; j++) {
 

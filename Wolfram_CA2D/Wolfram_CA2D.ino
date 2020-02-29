@@ -1,6 +1,8 @@
 // Wolfram 2D cellular automata //
 
-#include <odroid_go.h>
+#include "esp_partition.h"
+#include "esp_ota_ops.h"
+#include <M5Stack.h>
 
   #define SPEAKER 25
   #define WIDTH   160
@@ -63,10 +65,11 @@ void setup() {
 
   srand(time(NULL));
 
-  GO.begin();
+  M5.begin();
   pinMode(SPEAKER, OUTPUT);
   digitalWrite(SPEAKER, LOW);
-  GO.lcd.fillScreen(BLACK);
+  M5.Lcd.setTextColor(TFT_WHITE, TFT_BLACK);
+  M5.lcd.fillScreen(BLACK);
 
   state = (bool*)ps_malloc(size);
   newstate = (bool*)ps_malloc(size);
@@ -84,7 +87,12 @@ void setup() {
 
 void loop() {
 
-  if (GO.BtnA.wasPressed()) rndrule();
+  if (M5.BtnA.wasPressed()) { rndrule(); M5.Lcd.drawString("RND", 10, 10, 2); }
+  if (M5.BtnC.wasPressed()) {
+    const esp_partition_t *partition = esp_partition_find_first(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_ANY, NULL);
+    esp_ota_set_boot_partition(partition);
+    esp_restart();
+  }
 
   for(x = 0; x < WIDTH; x++){
     
@@ -108,7 +116,7 @@ void loop() {
  
   memcpy(state, newstate, SCR2);
 
-  GO.lcd.pushRect(0, 0, WFULL, HFULL,(uint16_t *) col);
-  GO.update();
+  M5.lcd.pushRect(0, 0, WFULL, HFULL,(uint16_t *) col);
+  M5.update();
 
 }

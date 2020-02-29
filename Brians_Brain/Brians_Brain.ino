@@ -1,6 +1,8 @@
 // Brian's Brain Cellular Automata //
 
-#include <odroid_go.h>
+#include "esp_partition.h"
+#include "esp_ota_ops.h"
+#include <M5Stack.h>
 
   #define SPEAKER 25
   #define WIDTH   160
@@ -89,10 +91,11 @@ void setup() {
 
   srand(time(NULL));
 
-  GO.begin();
+  M5.begin();
   pinMode(SPEAKER, OUTPUT);
   digitalWrite(SPEAKER, LOW);
-  GO.lcd.fillScreen(BLACK);
+  M5.Lcd.setTextColor(TFT_WHITE, TFT_BLACK);
+  M5.lcd.fillScreen(BLACK);
 
   world = (uint8_t*)ps_malloc(4*SCR2);
   temp = (uint8_t*)ps_malloc(4*SCR2);
@@ -105,7 +108,12 @@ void setup() {
 
 void loop() {
 
-  if (GO.BtnA.wasPressed()) populate();
+  if (M5.BtnA.wasPressed()) { populate(); M5.Lcd.drawString("RND", 10, 10, 2); }
+  if (M5.BtnC.wasPressed()) {
+    const esp_partition_t *partition = esp_partition_find_first(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_ANY, NULL);
+    esp_ota_set_boot_partition(partition);
+    esp_restart();
+  }
    
   apply_rules(world);
   
@@ -119,7 +127,7 @@ void loop() {
     }
   }
 
-  GO.lcd.pushRect(0, 0, WFULL, HFULL,(uint16_t *) col);
-  GO.update();
+  M5.lcd.pushRect(0, 0, WFULL, HFULL,(uint16_t *) col);
+  M5.update();
     
 }

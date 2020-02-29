@@ -1,10 +1,12 @@
 // Wolfram 1D Cellular Automata // 
 
-#include <odroid_go.h>
+#include "esp_partition.h"
+#include "esp_ota_ops.h"
+#include <M5Stack.h>
 
   #define SPEAKER 25
-  #define WIDTH   160
-  #define HEIGHT  120
+  #define WIDTH   320
+  #define HEIGHT  240
   #define WFULL   320
   #define HFULL   240
   #define SCR     (WFULL*HFULL)
@@ -26,10 +28,11 @@ void setup() {
 
   srand(time(NULL));
 
-  GO.begin();
+  M5.begin();
   pinMode(SPEAKER, OUTPUT);
   digitalWrite(SPEAKER, LOW);
-  GO.lcd.fillScreen(BLACK);
+  M5.Lcd.setTextColor(TFT_WHITE, TFT_BLACK);
+  M5.lcd.fillScreen(BLACK);
 
   state = (uint8_t*)ps_malloc(size);
   newstate = (uint8_t*)ps_malloc(size);
@@ -42,8 +45,13 @@ void setup() {
 
 void loop() {
 
-  if (GO.BtnA.wasPressed()) {rndrule(); for (x=0;x<8;x++) rules[x] = esp_random()%2;}
-  if (GO.BtnB.wasPressed()) {center = !center; rndrule();}
+  if (M5.BtnA.wasPressed()) {rndrule(); for (x=0;x<8;x++) rules[x] = esp_random()%2; M5.Lcd.drawString("RND", 10, 10, 2);}
+  if (M5.BtnB.wasPressed()) {center = !center; rndrule(); M5.Lcd.drawString("Center", 10, 10, 2);}
+  if (M5.BtnC.wasPressed()) {
+    const esp_partition_t *partition = esp_partition_find_first(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_ANY, NULL);
+    esp_ota_set_boot_partition(partition);
+    esp_restart();
+  }
 
   for (y = 0; y < HEIGHT; y++) {
 
@@ -59,13 +67,13 @@ void loop() {
     for (x = 0; x < WIDTH; x++) {
       if (state[x] == 1) coll = WHITE;       
       else coll = BLACK;
-      col[(2*x)+WFULL*(2*y)] = coll;
+      col[x+WFULL*y] = coll;
     }
 
   }
 
-  GO.lcd.pushRect(0, 0, WFULL, HFULL,(uint16_t *) col);
-  GO.update();
+  M5.lcd.pushRect(0, 0, WFULL, HFULL,(uint16_t *) col);
+  M5.update();
 
 }
 
