@@ -1,4 +1,4 @@
-// Mira choatic map //
+// Mira chaotic map //
 
 #include "esp_partition.h"
 #include "esp_ota_ops.h"
