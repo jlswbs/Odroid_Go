@@ -1,4 +1,4 @@
-Cellular automatas, fractals, strange attractors for Odroid-Go
+Cellular automatas, fractals, strange and chaotic attractors for Odroid-Go
 
 Required:
 - Arduino IDE + ESP32
