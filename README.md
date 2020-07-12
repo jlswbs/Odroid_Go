@@ -1,4 +1,4 @@
-Cellular automata and fractal for Odroid-Go
+Cellular automatas, fractals, strange attractors for Odroid-Go
 
 Required:
 - Arduino IDE
