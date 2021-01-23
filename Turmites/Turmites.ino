@@ -17,8 +17,6 @@
   int state;
   int dir;
   uint8_t world[WIDTH][HEIGHT];
-  int moves;
-  int filled;
   int current_col;
   uint8_t next_col[4][4];
   uint8_t next_state[4][4];
@@ -29,8 +27,6 @@ void rndrule(){
   memset((uint16_t *) col, 0, 4*SCR);
 
   state = esp_random()%4;
-  filled = 0;
-  moves = 0;
   dir = 0;
   posx = WIDTH/2;
   posy = HEIGHT/2;
@@ -51,11 +47,7 @@ void rndrule(){
 
 void move_turmite(){
   
-  moves ++;
   int cols = world[posx][posy];
-  
-  if((cols > 0) && (next_col[cols][state] == 0)) filled--;
-  if((cols == 0) && (next_col[cols][state] > 0)) filled++;
   
   oldposx = posx;
   oldposy = posy;
@@ -121,10 +113,9 @@ void loop(){
     }
     
   }
-
-  if((moves>1000) && (filled < 50)) rndrule();
   
   M5.lcd.pushRect(0, 0, WIDTH, HEIGHT,(uint16_t *) col);
+
   M5.update();
     
 }
