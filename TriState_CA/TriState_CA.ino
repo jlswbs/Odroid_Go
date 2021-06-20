@@ -34,10 +34,10 @@ void rndrule(){
   h = esp_random()%RND;
   i = esp_random()%RND;
 
-  for(int i = 0; i < WIDTH; i++){
+  for(int x = 0; x < WIDTH; x++){
   
-    parent[i] = esp_random()%3;
-    child[i] = 0;
+    parent[x] = esp_random()%3;
+    child[x] = 0;
     
   }
 
@@ -47,10 +47,10 @@ void rndrule2(){
 
   memset((uint16_t *) col, 0, 4*SCR);
 
-  for(int i = 0; i < WIDTH; i++){
+  for(int x = 0; x < WIDTH; x++){
   
-    parent[i] = esp_random()%3;
-    child[i] = 0;
+    parent[x] = esp_random()%3;
+    child[x] = 0;
     
   }
 
@@ -84,23 +84,23 @@ void loop(){
     esp_restart();
   }
 
-  for (int j = 0; j < HEIGHT; j++) {
+  for (int y = 0; y < HEIGHT; y++) {
  
-    for (int i = 0; i < WIDTH; i++) {
+    for (int x = 0; x < WIDTH; x++) {
           
-      if (i == 0) count = parent[WIDTH-1] + parent[0] + parent[1];
-      else if (i == WIDTH-1) count = parent[WIDTH-2] + parent[WIDTH-1] + parent[0];
-      else count = parent[i-1] + parent[i] + parent[i+1];        
+      if (x == 0) count = parent[WIDTH-1] + parent[0] + parent[1];
+      else if (x == WIDTH-1) count = parent[WIDTH-2] + parent[WIDTH-1] + parent[0];
+      else count = parent[x-1] + parent[x] + parent[x+1];        
             
-        if (count == a || count == b || count == c) child[i] = 0;
-        if (count == d || count == e || count == f) child[i] = 1;
-        if (count == g || count == h || count == i) child[i] = 2;
+        if (count == a || count == b || count == c) child[x] = 0;
+        if (count == d || count == e || count == f) child[x] = 1;
+        if (count == g || count == h || count == i) child[x] = 2;
                
-        if (child[i] == 0) coll = TFT_RED;
-        if (child[i] == 1) coll = TFT_WHITE;
-        if (child[i] == 2) coll = TFT_BLUE;
+        if (child[x] == 0) coll = TFT_RED;
+        if (child[x] == 1) coll = TFT_WHITE;
+        if (child[x] == 2) coll = TFT_BLUE;
 
-        col[i+WIDTH*j] = coll;
+        col[x+WIDTH*y] = coll;
                                                    
       }
                                                  
