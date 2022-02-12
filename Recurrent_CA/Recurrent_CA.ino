@@ -1,7 +1,5 @@
 // Recurrent cellular automata //
 
-#include "esp_partition.h"
-#include "esp_ota_ops.h"
 #include <ESP32-Chimera-Core.h>
 
   #define SPEAKER 25
@@ -33,8 +31,7 @@ void rndrule(){
 
 void rndseed(){
 
-  memset((uint16_t *) col, 0, 4*SCR);
-  
+  memset((uint16_t *) col, 0, 4*SCR); 
   for(int i = 0; i < WIDTH; i++) parent[i] = esp_random()%COL;
 
 }
@@ -61,11 +58,7 @@ void loop(){
 
   if (M5.BtnA.wasPressed()) { rndrule(); M5.Lcd.drawString("RULE", 10, 10, 2); }
   if (M5.BtnB.wasPressed()) { rndseed(); M5.Lcd.drawString("SEED", 10, 10, 2); }
-  if (M5.BtnC.wasPressed()) {
-    const esp_partition_t *partition = esp_partition_find_first(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_ANY, NULL);
-    esp_ota_set_boot_partition(partition);
-    esp_restart();
-  }
+  if (M5.BtnC.wasPressed()) esp_restart();
 
   for (int y = 0; y < HEIGHT; y++) {
  
