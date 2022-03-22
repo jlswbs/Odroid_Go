@@ -1,8 +1,6 @@
 // Mira Mod chaotic map //
 
-#include "esp_partition.h"
-#include "esp_ota_ops.h"
-#include <M5Stack.h>
+#include <ESP32-Chimera-Core.h>
 
   #define SPEAKER 25
   #define WIDTH   320
@@ -12,10 +10,10 @@
   uint32_t size = ((2*WIDTH) * (2*HEIGHT));
   uint16_t *col = NULL;
 
-  uint16_t coll;
+  #define ITER  2000
+
+  uint16_t coll = TFT_WHITE;
   bool colen = true;
-  uint16_t xx, yy;
-  int iterations = 10000;
   float x = 1.0f;
   float y = 0.0f;
   float f = 0.0f;
@@ -30,7 +28,7 @@ void rndrule(){
   x = 1.0f;
   y = 0.0f;
   f = 0.0f;
-  a = randomf(0.099f, 0.599f);
+  a = randomf(0.029f, 0.599f);
 
 }
 
@@ -44,7 +42,7 @@ void setup() {
   pinMode(SPEAKER, OUTPUT);
   digitalWrite(SPEAKER, LOW);
   M5.Lcd.setTextColor(TFT_WHITE, TFT_BLACK);
-  M5.lcd.fillScreen(TFT_BLACK);
+  M5.Lcd.fillScreen(TFT_BLACK);
 
   rndrule();
 
@@ -57,25 +55,25 @@ void loop() {
 
   if (M5.BtnA.wasPressed()) { rndrule(); M5.Lcd.drawString("RND", 10, 10, 2); }
   if (M5.BtnB.wasPressed()) { colen = !colen; M5.Lcd.drawString("COLOR", 10, 10, 2); }
-  if (M5.BtnC.wasPressed()) {
-    const esp_partition_t *partition = esp_partition_find_first(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_ANY, NULL);
-    esp_ota_set_boot_partition(partition);
-    esp_restart();
-  }
+  if (M5.BtnC.wasPressed()) esp_restart();
 
-  coll = esp_random();
-
-  for (int i = 0; i < iterations; i++) {
+  for (int i = 0; i < ITER; i++) {
 
     float nx = x;
     float ny = y;
         
     x = ny + f;
-    f = a*x - 3*a / (a + fabs(x));
+    f = a * x - 3.0f * a / (a + fabs(x));
     y = -nx + f;
 
-    xx = (WIDTH/2) + 3.0f * x; 
-    yy = (HEIGHT/2) + 3.0f * y;
+    uint16_t xx = (WIDTH/2) + 3.0f * x; 
+    uint16_t yy = (HEIGHT/2) + 3.0f * y;
+
+    if (coll == TFT_WHITE && xx == (WIDTH/2)+8){
+      memset((uint16_t *) col, 0, 4*SCR);
+      coll = TFT_WHITE;
+      a = randomf(0.029f, 0.499f);
+    } else if (xx == yy) coll = esp_random()%65535;
     
     if (xx > 0 && xx < WIDTH && yy > 0 && yy < HEIGHT) {
       if (colen) col[xx+yy*WIDTH] = coll;
@@ -84,7 +82,7 @@ void loop() {
 
   }
 
-  M5.lcd.pushRect(0, 0, WIDTH, HEIGHT,(uint16_t *) col);
+  M5.Lcd.pushRect(0, 0, WIDTH, HEIGHT,(uint16_t *) col);
   M5.update();
 
 }

@@ -13,6 +13,7 @@
   uint16_t *col = NULL;
 
   uint16_t coll = TFT_WHITE;
+  bool colen = true;
   float x = 1.0f;
   float y = 0.0f;
   float f = 0.0f;
@@ -50,7 +51,10 @@ void setup() {
 
 void loop() {
 
+  if (colen == false) memset((uint16_t *) col, 0, 4*SCR);
+
   if (M5.BtnA.wasPressed()) { rndrule(); M5.Lcd.drawString("RND", 10, 10, 2); }
+  if (M5.BtnB.wasPressed()) { colen = !colen; M5.Lcd.drawString("COLOR", 10, 10, 2); }
   if (M5.BtnC.wasPressed()) esp_restart();
  
   for (int i = 0; i < ITER; i++){
@@ -71,7 +75,10 @@ void loop() {
       a = randomf(0.099f, 0.499f);
     } else if (xx == yy) coll = esp_random()%65535;
       
-    if(xx > 0 && xx < WIDTH && yy > 0 && yy < HEIGHT) col[xx+yy*WIDTH] = coll;
+    if (xx > 0 && xx < WIDTH && yy > 0 && yy < HEIGHT) {
+      if (colen) col[xx+yy*WIDTH] = coll;
+      else col[xx+yy*WIDTH] = TFT_WHITE;
+    }
     
   }
   
