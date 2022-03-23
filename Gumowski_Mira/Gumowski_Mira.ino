@@ -1,29 +1,25 @@
-// Gumowski-Mira strange attractor //
+// Gumowski-Mira chaotic map //
 
-#include "esp_partition.h"
-#include "esp_ota_ops.h"
-#include <M5Stack.h>
+#include <ESP32-Chimera-Core.h>
 
   #define SPEAKER 25
   #define WIDTH   320
   #define HEIGHT  240
-  #define WFULL   320
-  #define HFULL   240
-  #define SCR     (WFULL*HFULL)
-  #define SCR2    (WIDTH*HEIGHT)
+  #define SCR     (WIDTH*HEIGHT)
 
   uint32_t size = ((2*WIDTH) * (2*HEIGHT));
   uint16_t *col = NULL;
 
-  uint16_t coll;
-  uint16_t xx, yy;
-  int iterations = 10000;
+  #define ITER  2000
+
+  uint16_t coll = TFT_WHITE;
+  bool colen = true;
   float a = 0.000001f;
   float b = 0.05f;
   float m = -0.031f;
 
-  float nx = 0.0f;
-  float ny = 0.5f;
+  float x = 0.0f;
+  float y = 0.5f;
 
 float randomf(float minf, float maxf) {return minf + (esp_random()%(1UL << 31))*(maxf - minf) / (1UL << 31);}  
 
@@ -37,6 +33,8 @@ float mira(float x) {
 void rndrule(){
 
   memset((uint16_t *) col, 0, 4*SCR);
+  x = 0.0f;
+  y = 0.5f;
   m = randomf(-0.95f, -0.05f);
 
 }
@@ -51,7 +49,7 @@ void setup() {
   pinMode(SPEAKER, OUTPUT);
   digitalWrite(SPEAKER, LOW);
   M5.Lcd.setTextColor(TFT_WHITE, TFT_BLACK);
-  M5.lcd.fillScreen(BLACK);
+  M5.Lcd.fillScreen(TFT_BLACK);
 
   rndrule();
 
@@ -60,31 +58,39 @@ void setup() {
 
 void loop() {
 
+  if (colen == false) memset((uint16_t *) col, 0, 4*SCR);
+
   if (M5.BtnA.wasPressed()) { rndrule(); M5.Lcd.drawString("RND", 10, 10, 2); }
-  if (M5.BtnC.wasPressed()) {
-    const esp_partition_t *partition = esp_partition_find_first(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_ANY, NULL);
-    esp_ota_set_boot_partition(partition);
-    esp_restart();
-  }
+  if (M5.BtnB.wasPressed()) { colen = !colen; M5.Lcd.drawString("COLOR", 10, 10, 2); }
+  if (M5.BtnC.wasPressed()) esp_restart();
 
   coll = esp_random();
 
-  for (int i = 0; i < iterations; i++) {
+  for (int i = 0; i < ITER; i++) {
 
-    float x = nx;      
-    float y = ny;
+    float nx = x;
+    float ny = y;
     
-    nx = y + a * (1.0f - (b * (y * y))) * y + mira(x);
-    ny = -x + mira(nx);
+    x = ny + a * (1.0f - (b * powf(ny,2.0f))) * ny + mira(x);
+    y = -nx + mira(x);
 
-    xx = -8 + (WIDTH/2) + 3.0f * nx; 
-    yy = (HEIGHT/2) + 3.0f * ny;
+    uint16_t xx = -8 + (WIDTH/2) + 4.0f * x; 
+    uint16_t yy = (HEIGHT/2) + 4.0f * y;
     
-    if(xx > 0 && xx < WIDTH && yy > 0 && yy < HEIGHT) col[xx+yy*WIDTH] = coll;
+    if (coll == TFT_WHITE && xx == (WIDTH/2)+8){
+      memset((uint16_t *) col, 0, 4*SCR);
+      coll = TFT_WHITE;
+      m = randomf(-0.95f, -0.05f);
+    } else if (xx == yy) coll = esp_random()%65535;
+    
+    if (xx > 0 && xx < WIDTH && yy > 0 && yy < HEIGHT) {
+      if (colen) col[xx+yy*WIDTH] = coll;
+      else col[xx+yy*WIDTH] = TFT_WHITE;
+    }
 
   }
 
-  M5.lcd.pushRect(0, 0, WFULL, HFULL,(uint16_t *) col);
+  M5.Lcd.pushRect(0, 0, WIDTH, HEIGHT,(uint16_t *) col);
   M5.update();
 
 }
