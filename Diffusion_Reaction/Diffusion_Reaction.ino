@@ -1,16 +1,11 @@
-// Diffusion-Reaction 1D //
+// 1D Diffusion-Reaction //
 
-#include "esp_partition.h"
-#include "esp_ota_ops.h"
-#include <M5Stack.h>
+#include <ESP32-Chimera-Core.h>
 
   #define SPEAKER 25
   #define WIDTH   320
   #define HEIGHT  240
-  #define WFULL   320
-  #define HFULL   240
-  #define SCR     (WFULL*HFULL)
-  #define SCR2    (WIDTH*HEIGHT)
+  #define SCR     (WIDTH*HEIGHT)
 
   uint16_t RGB565( byte R, byte G, byte B){ return ( ((R & 0xF8) << 8) | ((G & 0xFC) << 3) | (B >> 3) );}
 
@@ -84,19 +79,14 @@
 
   uint32_t size = ((2*WIDTH) * (2*HEIGHT));
   uint16_t *col = NULL;
-
   uint16_t coll;
-
-  int i,j;
-
   float A[WIDTH]; 
   float I[WIDTH];
   float D2A[WIDTH]; 
   float D2I[WIDTH];
-
   float p[6] = {0.5f, 2.0f, 2.0f, 2.0f, 1.0f, 0.0f};
+  float a = 5.0f;
   float dt = 0.05f;
-
   bool color = false;
 
   float randomf(float minf, float maxf) {return minf + (esp_random()%(1UL << 31))*(maxf - minf) / (1UL << 31);}  
@@ -111,16 +101,15 @@ void rndrule(){
   p[3] = randomf(0.0f,15.0f);
   p[4] = randomf(0.0f,4.0f);
   p[5] = randomf(0.0f,2.0f);
+
+  a = randomf(1.9f, 7.9f);
    
-  for(i=0;i<WIDTH; i++) {
+  for(int i=0;i<WIDTH; i++) {
     
    A[i] = randomf(0.0f, 1.0f);
    I[i] = randomf(0.0f, 1.0f);
     
   }
-  
-  i = 0;
-  j = 0;
          
 }
 
@@ -134,7 +123,7 @@ void setup() {
   pinMode(SPEAKER, OUTPUT);
   digitalWrite(SPEAKER, LOW);
   M5.Lcd.setTextColor(TFT_WHITE, TFT_BLACK);
-  M5.lcd.fillScreen(BLACK);
+  M5.Lcd.fillScreen(TFT_BLACK);
 
   rndrule();
 
@@ -145,15 +134,11 @@ void loop() {
 
   if (M5.BtnA.wasPressed()) { rndrule(); M5.Lcd.drawString("RND", 10, 10, 2); }
   if (M5.BtnB.wasPressed()) { color = !color; M5.Lcd.drawString("Color", 10, 10, 2); }
-  if (M5.BtnC.wasPressed()) {
-    const esp_partition_t *partition = esp_partition_find_first(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_ANY, NULL);
-    esp_ota_set_boot_partition(partition);
-    esp_restart();
-  }
+  if (M5.BtnC.wasPressed()) esp_restart();
 
-  for(j=0;j<HEIGHT; j++) {
+  for(int j=0;j<HEIGHT; j++) {
     
-    for(i=1;i<WIDTH-1; i++) {
+    for(int i=1;i<WIDTH-1; i++) {
       
       D2A[i] = A[i-1] + A[i+1] - 2.0f * A[i];
       D2I[i] = I[i-1] + I[i+1] - 2.0f * I[i];
@@ -163,30 +148,32 @@ void loop() {
     D2A[0] = A[1] - A[0]; 
     D2I[0] = I[1] - I[0]; 
 
-    for(i=0;i<WIDTH; i++) {
+    for(int i=0;i<WIDTH; i++) {
     
-      A[i] = A[i] + dt * (5.0f * A[i] *A[i] * A[i] / (I[i] * I[i]) + p[0] - p[1] * A[i] + p[2] * D2A[i]);
+      A[i] = A[i] + dt * (a * A[i] *A[i] * A[i] / (I[i] * I[i]) + p[0] - p[1] * A[i] + p[2] * D2A[i]);
       I[i] = I[i] + dt * (A[i] * A[i] *A[i] - p[3] * I[i] + p[4] * D2I[i] + p[5]);  
 
       if (color == true) {
         
-        uint16_t col1 = 250 - (50 * A[i]);
-        uint16_t col2 = 250 - (50 * I[i]);    
-        uint16_t col3 = 250 - (50 * D2I[i]);
-        col[i+j*WIDTH] = RGB565(col1, col2, col3);
+        uint8_t col1 = 250 - (50 * A[i]);
+        uint8_t col2 = 250 - (50 * I[i]);    
+        uint8_t col3 = 250 - (50 * D2I[i]);
+        coll = RGB565(col1, col2, col3);
             
       } else {
         
-        coll = 250 - (50 * A[i]);
-        col[i+j*WIDTH] = gray2rgb565[(uint8_t)coll>>2];
+        uint8_t col4 = 250 - (50.0f * (A[i]+I[i]));
+        coll = gray2rgb565[(uint8_t)col4>>2];
         
       }
+
+      col[i+j*WIDTH] = coll;
       
     }
 
   }
 
-  M5.lcd.pushRect(0, 0, WFULL, HFULL,(uint16_t *) col);
+  M5.Lcd.pushRect(0, 0, WIDTH, HEIGHT,(uint16_t *) col);
   M5.update();
 
 }
