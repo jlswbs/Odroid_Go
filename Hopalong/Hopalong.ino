@@ -1,19 +1,16 @@
 // Hopalong orbit fractal //
 
-#include "esp_partition.h"
-#include "esp_ota_ops.h"
-#include <M5Stack.h>
+#include <ESP32-Chimera-Core.h>
 
   #define SPEAKER 25
   #define WIDTH   320
   #define HEIGHT  240
-  #define WFULL   320
-  #define HFULL   240
-  #define SCR     (WFULL*HFULL)
-  #define SCR2    (WIDTH*HEIGHT)
+  #define SCR     WIDTH*HEIGHT
 
   uint32_t size = ((2*WIDTH) * (2*HEIGHT));
   uint16_t *col = NULL;
+
+  #define ITER    10000
 
   long ranfseed;
   float randf() {return (ranfseed=(ranfseed*1629+1)%1048576)/1048576.0f;}
@@ -51,7 +48,7 @@ void setup() {
   pinMode(SPEAKER, OUTPUT);
   digitalWrite(SPEAKER, LOW);
   M5.Lcd.setTextColor(TFT_WHITE, TFT_BLACK);
-  M5.lcd.fillScreen(BLACK);
+  M5.Lcd.fillScreen(TFT_BLACK);
 
   col = (uint16_t*)ps_malloc(4*SCR);
 
@@ -63,15 +60,11 @@ void setup() {
 void loop() {
 
   if (M5.BtnA.wasPressed()) { rndrule(); M5.Lcd.drawString("RND", 10, 10, 2); }
-  if (M5.BtnC.wasPressed()) {
-    const esp_partition_t *partition = esp_partition_find_first(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_ANY, NULL);
-    esp_ota_set_boot_partition(partition);
-    esp_restart();
-  }
+  if (M5.BtnC.wasPressed()) esp_restart();
 
   coll = esp_random();
 
-  for (int i=0;i<10000;i++) {
+  for (int i=0; i<ITER; i++) {
 
     float nx = x;
     float ny = y;
@@ -87,7 +80,7 @@ void loop() {
 
   }
 
-  M5.lcd.pushRect(0, 0, WFULL, HFULL,(uint16_t *) col);
+  M5.Lcd.pushRect(0, 0, WIDTH, HEIGHT,(uint16_t *) col);
   M5.update();
 
 }
