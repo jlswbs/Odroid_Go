@@ -1,8 +1,6 @@
-// Fizzy Cellular Automata //
+// Fizzy 2D cellular automata //
 
-#include "esp_partition.h"
-#include "esp_ota_ops.h"
-#include <M5Stack.h>
+#include <ESP32-Chimera-Core.h>
 
   #define SPEAKER 25
   #define WIDTH   160
@@ -12,19 +10,21 @@
   #define SCR     (WFULL*HFULL)
   #define SCR2    (WIDTH*HEIGHT)
 
+  float randomf(float minf, float maxf) {return minf + (esp_random()%(1UL << 31))*(maxf - minf) / (1UL << 31);} 
+
   uint32_t size = ((2*WIDTH) * (2*HEIGHT));
   uint16_t *col = NULL;
-
+  float *CellVal = NULL;
   uint8_t Calm = 233;
   int CellIndex = 0;
   int i,j;
 
-  float *CellVal = NULL;
-
 void rndrule(){
 
   memset((uint16_t *) col, 0, 4*SCR);
-  for (i = 0; i < SCR2; i++) CellVal[i] = esp_random()%100;
+  CellIndex = 0;
+  Calm = 16 + esp_random()%233;
+  for (int i = 0; i < SCR2; i++) CellVal[i] = randomf(0.0f, 128.0f);
 
 }
   
@@ -36,7 +36,7 @@ void setup() {
   pinMode(SPEAKER, OUTPUT);
   digitalWrite(SPEAKER, LOW);
   M5.Lcd.setTextColor(TFT_WHITE, TFT_BLACK);
-  M5.lcd.fillScreen(BLACK);
+  M5.Lcd.fillScreen(TFT_BLACK);
 
   CellVal = (float*)ps_malloc(size);
   col = (uint16_t*)ps_malloc(4*SCR);
@@ -49,14 +49,10 @@ void setup() {
 void loop() {
 
   if (M5.BtnA.wasPressed()) { rndrule(); M5.Lcd.drawString("RND", 10, 10, 2); }
-  if (M5.BtnB.wasPressed()) { Calm = 21 + esp_random()%213; M5.Lcd.drawNumber(Calm, 10, 10, 2); }
-  if (M5.BtnC.wasPressed()) {
-    const esp_partition_t *partition = esp_partition_find_first(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_ANY, NULL);
-    esp_ota_set_boot_partition(partition);
-    esp_restart();
-  }
-  
+  if (M5.BtnC.wasPressed()) esp_restart();
+
   for (i = 0; i < WIDTH; i++) {
+    
     for (j = 0; j < HEIGHT; j++) {
 
       CellIndex = (CellIndex+1)%SCR2;
@@ -65,7 +61,7 @@ void loop() {
       uint8_t nifna = (uint8_t)round(CellVal[CellIndex]*3.9f)%100;
       uint8_t blugg = (uint8_t)round(CellVal[CellIndex]*5.5f)%100;
 
-      col[(2*i)+(2*j)*WFULL] = M5.lcd.color565(klimp,nifna,blugg);
+      col[(2*i)+(2*j)*WFULL] = M5.Lcd.color565(klimp,nifna,blugg);
 
       int below      = (CellIndex+1)%SCR2;
       int above      = (CellIndex+SCR2-1)%SCR2;
@@ -83,7 +79,7 @@ void loop() {
 
   }
 
-  M5.lcd.pushRect(0, 0, WFULL, HFULL,(uint16_t *) col);
+  M5.Lcd.pushRect(0, 0, WFULL, HFULL,(uint16_t *) col);
   M5.update();
 
 }
