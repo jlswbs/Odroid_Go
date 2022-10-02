@@ -11,8 +11,6 @@
   #define SCR2    (WIDTH * HEIGHT)
   #define ITER    64
 
-  uint32_t size = ((2*WIDTH) * (2*HEIGHT));
-
   float randomf(float minf, float maxf) {return minf + (esp_random()%(1UL << 31)) * (maxf - minf) / (1UL << 31);}
 
   uint16_t *col = NULL;
@@ -21,11 +19,12 @@
   float diffV = 0.08f;
   float paramF = 0.035f;
   float paramK = 0.06f;
-  
-  float *U = NULL;
-  float *V = NULL;
-  float *dU = NULL;
-  float *dV = NULL;
+
+  float U[WIDTH][HEIGHT];
+  float V[WIDTH][HEIGHT];
+
+  float dU[WIDTH][HEIGHT];
+  float dV[WIDTH][HEIGHT];
  
   static uint16_t gray2rgb565[64] = {
     0x0000,
@@ -103,17 +102,17 @@ void rndrule(){
   paramF = randomf(0.0299f, 0.0399f);
   paramK = randomf(0.0549f, 0.0649f);
   
-  for (int i = 0; i < SCR2; i++) {    
-    U[i] = 1.0f;
-    V[i] = 0.0f;
-    dU[i] = 0.0f;
-    dV[i] = 0.0f;
+  for (int j = 0; j < HEIGHT; j++) { 
+    for (int i = 0; i < WIDTH; i++) {    
+      U[i][j] = 1.0f;
+      V[i][j] = 0.0f;        
+    }
   }
 
   for(int j=(HEIGHT-4)/2;j<(HEIGHT+4)/2;++j){      
     for(int i=(WIDTH-4)/2;i<(WIDTH+4)/2;++i){          
-      U[i+WIDTH*j] = randomf(0.5f, 1.0f);
-      V[i+WIDTH*j] = randomf(0.25f, 0.5f); 
+      U[i][j] = randomf(0.5f, 1.0f);
+      V[i][j] = randomf(0.25f, 0.5f); 
     }
   }
 
@@ -121,19 +120,19 @@ void rndrule(){
 
 void timestep(float F, float K, float diffU, float diffV) {
 
-  for (int j = 1; j < HEIGHT-1; j++) {
+   for (int j = 1; j < HEIGHT-1; j++) {
     for (int i = 1; i < WIDTH-1; i++) {
             
-      float u = U[i+WIDTH*j];
-      float v = V[i+WIDTH*j];
+      float u = U[i][j];
+      float v = V[i][j];
           
       float uvv = u * v * v;     
        
-      float lapU = (U[(i-1)+WIDTH*j] + U[(i+1)+WIDTH*j] + U[i+WIDTH*(j-1)] + U[i+WIDTH*(j+1)] - 4.0f * u);
-      float lapV = (V[(i-1)+WIDTH*j] + V[(i+1)+WIDTH*j] + V[i+WIDTH*(j-1)] + V[i+WIDTH*(j+1)] - 4.0f * v);
+      float lapU = (U[i-1][j] + U[i+1][j] + U[i][j-1] + U[i][j+1] - 4.0f * u);
+      float lapV = (V[i-1][j] + V[i+1][j] + V[i][j-1] + V[i][j+1] - 4.0f * v);
           
-      dU[i+WIDTH*j] = diffU * lapU - uvv + F * (1.0f - u);
-      dV[i+WIDTH*j] = diffV * lapV + uvv - (K + F) * v;
+      dU[i][j] = diffU*lapU - uvv + F*(1.0f-u);
+      dV[i][j] = diffV*lapV + uvv - (K+F)*v;
           
     }
   }
@@ -141,12 +140,9 @@ void timestep(float F, float K, float diffU, float diffV) {
   for (int j = 0; j < HEIGHT; j++){   
     for (int i= 0; i < WIDTH; i++) {
          
-      U[i+WIDTH*j] += dU[i+WIDTH*j];
-      V[i+WIDTH*j] += dV[i+WIDTH*j];
+      U[i][j] += dU[i][j];
+      V[i][j] += dV[i][j];
 
-      uint8_t coll = 255 * U[i+WIDTH*j];
-      col[(4*i)+(4*j)*WFULL] = gray2rgb565[(uint8_t)coll>>2]; 
-      
     }
   }
 }
@@ -161,12 +157,8 @@ void setup() {
   M5.Lcd.setTextColor(TFT_WHITE, TFT_BLACK);
   M5.Lcd.fillScreen(TFT_BLACK);
 
-  U = (float*)ps_malloc(size);
-  V = (float*)ps_malloc(size);
-  dU = (float*)ps_malloc(size);
-  dV = (float*)ps_malloc(size);
   col = (uint16_t*)ps_malloc(4*SCR);
-
+  
   rndrule();
   
 }
@@ -178,6 +170,15 @@ void loop() {
   if (M5.BtnC.wasPressed()) esp_restart();
  
   for (int k = 0; k < ITER; k++) timestep(paramF, paramK, diffU, diffV);
+
+  for (int j = 0; j < HEIGHT; j++){   
+    for (int i= 0; i < WIDTH; i++) {
+
+      uint8_t coll = 255 * U[i][j];
+      col[(4*i)+(4*j)*WFULL] = gray2rgb565[(uint8_t)coll>>2]; 
+      
+    }
+  }
 
   M5.Lcd.pushRect(0, 0, WFULL, HFULL,(uint16_t *) col);
   M5.update();
